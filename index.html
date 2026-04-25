@@ -477,9 +477,10 @@ function processTraffic(rows) {
     const m = {};
     norm.forEach(r => {
       const k = r[key] || '—';
-      if (!m[k]) m[k] = {spend:0,leads:0,impr:0,clicks:0,lpv:0};
+      if (!m[k]) m[k] = {spend:0,leads:0,impr:0,clicks:0,lpv:0,perma:''};
       m[k].spend += r.spend; m[k].leads += r.leads; m[k].impr += r.impr;
       m[k].clicks += r.clicks; m[k].lpv += r.lpv;
+      if (!m[k].perma && r.perma) m[k].perma = r.perma;
     });
     return Object.entries(m).map(([k,v]) => ({
       key:k, ...v,
@@ -582,6 +583,27 @@ function processSurvey(rows) {
 /* ========== RENDER HELPERS ========== */
 function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
 
+// Tooltip que adiciona % do total do dataset.
+// formatter: (value, datasetLabel, ctx) => string formatado
+function pctTooltip(formatter) {
+  return {
+    callbacks: {
+      label: function(ctx) {
+        const ds = ctx.dataset;
+        const value = Number(ctx.raw) || 0;
+        const total = ds.data.reduce((a,b) => a + (Number(b) || 0), 0);
+        const pct = total ? ((value/total)*100).toFixed(1) : '0.0';
+        const fmt = formatter ? formatter(value, ds.label, ctx) : value.toLocaleString('pt-BR');
+        const type = ctx.chart.config.type;
+        const isPie = type === 'doughnut' || type === 'pie' || type === 'polarArea';
+        if (isPie) return `${ctx.label}: ${fmt} (${pct}%)`;
+        const prefix = ds.label || ctx.label || '';
+        return prefix ? `${prefix}: ${fmt} (${pct}%)` : `${fmt} (${pct}%)`;
+      }
+    }
+  };
+}
+
 function makeChart(id, type, data, options={}) {
   const ctx = document.getElementById(id);
   if (!ctx) return;
@@ -644,6 +666,9 @@ function renderOverview(t, s) {
     scales: {
       y: { position: 'left', title: { display: true, text: 'R$', color: COLOR.muted } },
       y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Leads', color: COLOR.gold }, ticks: { color: COLOR.gold } },
+    },
+    plugins: {
+      tooltip: pctTooltip((v, label) => label && label.includes('R$') ? fmtCurrency(v) : fmtNum(v)),
     }
   });
 
@@ -673,7 +698,12 @@ function renderOverview(t, s) {
       backgroundColor: s.probCounts.map((_,i) => i+1 >= 8 ? COLOR.gold : (i+1 >= 5 ? COLOR.goldDim : '#404040')),
       borderRadius: 4,
     }]
-  }, { plugins: { legend: { display: false } } });
+  }, {
+    plugins: {
+      legend: { display: false },
+      tooltip: pctTooltip((v) => `${fmtNum(v)} resp.`),
+    }
+  });
 
   // Peso na decisão
   makeChart('chartWeight', 'doughnut', {
@@ -684,7 +714,13 @@ function renderOverview(t, s) {
       borderColor: COLOR.surface,
       borderWidth: 2,
     }]
-  }, { cutout: '62%', plugins: { legend: { position: 'bottom', labels: { color: COLOR.ink, font: { size: 11 }, padding: 12, boxWidth: 10 } } } });
+  }, {
+    cutout: '62%',
+    plugins: {
+      legend: { position: 'bottom', labels: { color: COLOR.ink, font: { size: 11 }, padding: 12, boxWidth: 10 } },
+      tooltip: pctTooltip((v) => `${fmtNum(v)} resp.`),
+    }
+  });
 }
 
 /* ========== RENDER TRAFFIC ========== */
@@ -697,7 +733,7 @@ function renderTraffic(t) {
   setText('t_leads', fmtNum(t.totals.leads));
   setText('t_cpl', t.totals.leads ? fmtCurrency(t.totals.cpl) : '—');
 
-  // Por criativo
+  // Por criativo (com link clicável)
   makeChart('chartByAd', 'bar', {
     labels: t.byAd.map(x => x.key),
     datasets: [
@@ -708,7 +744,24 @@ function renderTraffic(t) {
     scales: {
       y: { position: 'left' },
       y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: COLOR.gold } },
-    }
+    },
+    plugins: {
+      tooltip: pctTooltip((v, label) => {
+        if (label && label.includes('R$')) return fmtCurrency(v);
+        return fmtNum(v);
+      }),
+    },
+    onClick: (e, els) => {
+      if (!els.length) return;
+      const item = t.byAd[els[0].index];
+      if (item && item.perma) window.open(item.perma, '_blank', 'noopener');
+    },
+    onHover: (e, els) => {
+      const target = e.native && e.native.target;
+      if (!target) return;
+      const hasLink = els.length && t.byAd[els[0].index]?.perma;
+      target.style.cursor = hasLink ? 'pointer' : 'default';
+    },
   });
 
   // Por adset
@@ -723,7 +776,13 @@ function renderTraffic(t) {
     scales: {
       y: { ticks: { color: COLOR.muted, font: { size: 10 } } },
       x: { position: 'bottom' },
-    }
+    },
+    plugins: {
+      tooltip: pctTooltip((v, label) => {
+        if (label && label.includes('R$')) return fmtCurrency(v);
+        return fmtNum(v);
+      }),
+    },
   });
 
   // CPL por dia
@@ -731,6 +790,8 @@ function renderTraffic(t) {
     const x = t.byDate[d];
     return x.leads ? +(x.spend/x.leads).toFixed(2) : null;
   });
+  const cplVals = cplByDay.filter(v => v !== null);
+  const avgCpl = cplVals.length ? cplVals.reduce((a,b)=>a+b,0) / cplVals.length : 0;
   makeChart('chartCplDaily', 'line', {
     labels: t.dailyDates.map(d => d.slice(5)),
     datasets: [{
@@ -745,13 +806,31 @@ function renderTraffic(t) {
       fill: true,
       spanGaps: true,
     }]
+  }, {
+    plugins: {
+      tooltip: {
+        callbacks: {
+          label: function(ctx) {
+            const v = Number(ctx.raw);
+            if (!v) return 'Sem leads no dia';
+            const dev = avgCpl ? ((v - avgCpl) / avgCpl * 100) : 0;
+            const sign = dev >= 0 ? '+' : '';
+            return `CPL: ${fmtCurrency(v)} (${sign}${dev.toFixed(1)}% vs média)`;
+          }
+        }
+      }
+    }
   });
 
-  // Tabela
+  // Tabela (criativos com link clicável)
   const tbl = document.getElementById('adTable');
-  tbl.innerHTML = t.byAd.map(r => `
+  tbl.innerHTML = t.byAd.map(r => {
+    const adCell = r.perma
+      ? `<a href="${r.perma}" target="_blank" rel="noopener" class="text-ink hover:text-gold underline-offset-2 hover:underline inline-flex items-center gap-1.5">${r.key}<svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="opacity-60"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg></a>`
+      : r.key;
+    return `
     <tr class="border-b border-border/60 hover:bg-surface2/50">
-      <td class="py-2 pr-4 font-medium text-ink">${r.key}</td>
+      <td class="py-2 pr-4 font-medium text-ink">${adCell}</td>
       <td class="py-2 pr-4 text-right">${fmtCurrency(r.spend)}</td>
       <td class="py-2 pr-4 text-right">${fmtNum(r.impr)}</td>
       <td class="py-2 pr-4 text-right">${fmtNum(r.clicks)}</td>
@@ -760,7 +839,8 @@ function renderTraffic(t) {
       <td class="py-2 pr-4 text-right">${r.leads ? fmtCurrency(r.cpl) : '—'}</td>
       <td class="py-2 text-right">${fmtPct(r.ctr)}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 /* ========== RENDER SURVEY ========== */
@@ -774,19 +854,34 @@ function renderSurvey(s) {
 
   const horizontalBar = (id, items, max = 8) => {
     const data = items.slice(0, max);
+    const fullLabels = data.map(x => x.key);
     makeChart(id, 'bar', {
       labels: data.map(x => x.key.length > 38 ? x.key.slice(0,36)+'…' : x.key),
       datasets: [{ label: 'Respondentes', data: data.map(x => x.count), backgroundColor: COLOR.gold, borderRadius: 4 }]
     }, {
       indexAxis: 'y',
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: (items) => fullLabels[items[0].dataIndex] || items[0].label,
+            ...pctTooltip((v) => `${fmtNum(v)} resp.`).callbacks,
+          }
+        },
+      },
     });
   };
   const donut = (id, items) => {
     makeChart(id, 'doughnut', {
       labels: items.map(x => x.key),
       datasets: [{ data: items.map(x=>x.count), backgroundColor: COLOR.palette, borderColor: COLOR.surface, borderWidth: 2 }]
-    }, { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: COLOR.ink, font: { size: 11 }, padding: 10, boxWidth: 10 } } } });
+    }, {
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'bottom', labels: { color: COLOR.ink, font: { size: 11 }, padding: 10, boxWidth: 10 } },
+        tooltip: pctTooltip((v) => `${fmtNum(v)} resp.`),
+      }
+    });
   };
 
   horizontalBar('chartProfession', s.profession);
@@ -809,6 +904,15 @@ function renderSurvey(s) {
       { label: 'Atual', data: incomeKeys.map(k => mapNow[k]||0), backgroundColor: '#737373', borderRadius: 4 },
       { label: 'Desejada', data: incomeKeys.map(k => mapGoal[k]||0), backgroundColor: COLOR.gold, borderRadius: 4 },
     ]
+  }, {
+    plugins: {
+      tooltip: {
+        callbacks: {
+          title: (items) => incomeKeys[items[0].dataIndex] || items[0].label,
+          ...pctTooltip((v) => `${fmtNum(v)} resp.`).callbacks,
+        }
+      },
+    },
   });
 
   donut('chartFerretoTime', s.ferretoTime);
