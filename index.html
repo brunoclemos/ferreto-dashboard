@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ferreto · Formação Hidráulica de Casas — Dashboard</title>
+<link rel="icon" href="logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          bg: '#0A0A0A',
+          surface: '#141414',
+          surface2: '#1C1C1C',
+          border: '#262626',
+          ink: '#F5F5F5',
+          muted: '#A3A3A3',
+          gold: '#D4A017',
+          goldDim: '#A07810',
+          goldSoft: '#3A2C08',
+        },
+        fontFamily: {
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html, body { background:#0A0A0A; color:#F5F5F5; font-family: 'Inter', system-ui, sans-serif; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: #0A0A0A; }
+  ::-webkit-scrollbar-thumb { background: #262626; border-radius: 6px; }
+  ::-webkit-scrollbar-thumb:hover { background: #404040; }
+  .kpi-card { background: linear-gradient(180deg, #141414 0%, #0F0F0F 100%); border:1px solid #262626; }
+  .kpi-card-gold { background: linear-gradient(135deg, #2A1F08 0%, #1A1305 100%); border:1px solid #5A4210; }
+  .tab-btn { transition: all 0.18s ease; }
+  .tab-btn[data-active="true"] { background:#D4A017; color:#0A0A0A; }
+  .tab-btn[data-active="false"] { background:transparent; color:#A3A3A3; }
+  .tab-btn[data-active="false"]:hover { color:#F5F5F5; background:#1C1C1C; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:600; letter-spacing:0.4px; text-transform:uppercase; }
+  .pill-gold { background:#3A2C08; color:#D4A017; border:1px solid #5A4210; }
+  .pill-green { background:#0E2D1A; color:#10B981; border:1px solid #134E2E; }
+  .pill-muted { background:#1C1C1C; color:#A3A3A3; border:1px solid #262626; }
+  .spinner { width:18px; height:18px; border:2px solid #262626; border-top-color:#D4A017; border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .fade-in { animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform: translateY(0); } }
+  .quote-card { background:#141414; border-left:3px solid #D4A017; }
+  details > summary { list-style: none; cursor: pointer; }
+  details > summary::-webkit-details-marker { display: none; }
+  .chev { transition: transform 0.2s; }
+  details[open] .chev { transform: rotate(90deg); }
+</style>
+</head>
+<body class="min-h-screen">
+
+<!-- HEADER -->
+<header class="sticky top-0 z-40 backdrop-blur-md bg-bg/85 border-b border-border">
+  <div class="max-w-[1400px] mx-auto px-5 lg:px-8 py-4 flex items-center gap-4">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 bg-white rounded-md flex items-center justify-center p-1.5">
+        <img src="logo.png" alt="Ferreto" class="w-full h-full object-contain" />
+      </div>
+      <div class="leading-tight">
+        <div class="text-[11px] uppercase tracking-[0.18em] text-muted font-semibold">Ferreto</div>
+        <div class="text-base lg:text-lg font-bold text-ink">Formação Hidráulica de Casas</div>
+      </div>
+    </div>
+    <div class="ml-auto flex items-center gap-3">
+      <span class="pill pill-gold hidden sm:inline-flex">
+        <span class="w-1.5 h-1.5 rounded-full bg-gold animate-pulse"></span>
+        Lançamento · Lista de Espera
+      </span>
+      <div id="lastUpdate" class="hidden md:flex flex-col items-end leading-tight">
+        <div class="text-[10px] uppercase tracking-wider text-muted">Última atualização</div>
+        <div id="lastUpdateTime" class="text-xs font-semibold text-ink">—</div>
+      </div>
+      <button id="refreshBtn" class="flex items-center gap-2 bg-surface hover:bg-surface2 border border-border text-ink text-sm px-4 py-2 rounded-md font-medium transition">
+        <svg id="refreshIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        <span class="hidden sm:inline">Atualizar</span>
+      </button>
+    </div>
+  </div>
+  <!-- TABS -->
+  <div class="max-w-[1400px] mx-auto px-5 lg:px-8 pb-3 flex gap-1 overflow-x-auto">
+    <button class="tab-btn px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap" data-tab="overview" data-active="true">Visão Geral</button>
+    <button class="tab-btn px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap" data-tab="traffic" data-active="false">Tráfego (Meta Ads)</button>
+    <button class="tab-btn px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap" data-tab="research" data-active="false">Pesquisa de Avatar</button>
+    <button class="tab-btn px-4 py-2 rounded-md text-sm font-semibold whitespace-nowrap" data-tab="insights" data-active="false">Insights Qualitativos</button>
+  </div>
+</header>
+
+<!-- LOADING -->
+<div id="loadingScreen" class="fixed inset-0 bg-bg flex flex-col items-center justify-center z-50 transition-opacity duration-300">
+  <div class="w-16 h-16 bg-white rounded-lg flex items-center justify-center p-2 mb-5">
+    <img src="logo.png" alt="" class="w-full h-full object-contain" />
+  </div>
+  <div class="spinner mb-3"></div>
+  <div class="text-sm text-muted">Carregando dados de campanha e pesquisa...</div>
+</div>
+
+<!-- MAIN -->
+<main class="max-w-[1400px] mx-auto px-5 lg:px-8 py-6 lg:py-8">
+
+  <!-- ============ VISÃO GERAL ============ -->
+  <section data-tab-content="overview" class="fade-in">
+    <div class="mb-6">
+      <h1 class="text-2xl lg:text-3xl font-extrabold text-ink">Visão Geral do Lançamento</h1>
+      <p class="text-muted text-sm mt-1">Captação via Meta Ads + Pesquisa de avatar com a lista de espera</p>
+    </div>
+
+    <!-- KPIs PRINCIPAIS -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+      <div class="kpi-card p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Investimento</div>
+        <div id="kpiSpend" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiSpendSub" class="text-[11px] text-muted mt-1">—</div>
+      </div>
+      <div class="kpi-card-gold p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-gold font-semibold">Leads Captados</div>
+        <div id="kpiLeads" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiLeadsSub" class="text-[11px] text-muted mt-1">—</div>
+      </div>
+      <div class="kpi-card p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">CPL Médio</div>
+        <div id="kpiCpl" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div class="text-[11px] text-muted mt-1">Custo por lead</div>
+      </div>
+      <div class="kpi-card p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Impressões</div>
+        <div id="kpiImpr" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiCpm" class="text-[11px] text-muted mt-1">—</div>
+      </div>
+      <div class="kpi-card p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Pesquisas Respondidas</div>
+        <div id="kpiSurvey" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiSurveyRate" class="text-[11px] text-muted mt-1">—</div>
+      </div>
+      <div class="kpi-card-gold p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-gold font-semibold">Hot Leads (compra ≥ 8)</div>
+        <div id="kpiHot" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiHotPct" class="text-[11px] text-muted mt-1">—</div>
+      </div>
+    </div>
+
+    <!-- ROW: Curva diária + Funil -->
+    <div class="grid lg:grid-cols-3 gap-4 mb-4">
+      <div class="lg:col-span-2 bg-surface border border-border rounded-lg p-5">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-base font-bold text-ink">Captação ao longo do tempo</h2>
+          <span class="pill pill-muted">Investimento × Leads</span>
+        </div>
+        <p class="text-xs text-muted mb-4">Evolução diária do investimento e dos leads gerados</p>
+        <div class="h-[280px]"><canvas id="chartDaily"></canvas></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Funil de captação</h2>
+        <p class="text-xs text-muted mb-4">Da impressão ao lead</p>
+        <div id="funnel" class="space-y-3"></div>
+      </div>
+    </div>
+
+    <!-- ROW: Probabilidade + O que pesa -->
+    <div class="grid lg:grid-cols-3 gap-4 mb-4">
+      <div class="lg:col-span-2 bg-surface border border-border rounded-lg p-5">
+        <div class="flex items-center justify-between mb-1">
+          <h2 class="text-base font-bold text-ink">Probabilidade de compra do curso</h2>
+          <span class="pill pill-gold">Ticket R$ 1.500</span>
+        </div>
+        <p class="text-xs text-muted mb-4">Distribuição da nota 1 a 10 entre os respondentes da pesquisa</p>
+        <div class="h-[260px]"><canvas id="chartProb"></canvas></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">O que mais pesa na decisão</h2>
+        <p class="text-xs text-muted mb-4">Critério principal de compra</p>
+        <div class="h-[260px] flex items-center justify-center"><canvas id="chartWeight"></canvas></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============ TRÁFEGO ============ -->
+  <section data-tab-content="traffic" class="hidden fade-in">
+    <div class="mb-6">
+      <h1 class="text-2xl lg:text-3xl font-extrabold text-ink">Tráfego — Meta Ads</h1>
+      <p class="text-muted text-sm mt-1">Performance da campanha LEHC · LEAD · Captação Quente</p>
+    </div>
+
+    <!-- KPIs Tráfego -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+      <div class="kpi-card p-3 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Investido</div><div id="t_spend" class="text-xl font-extrabold text-ink mt-1">—</div></div>
+      <div class="kpi-card p-3 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Impressões</div><div id="t_impr" class="text-xl font-extrabold text-ink mt-1">—</div></div>
+      <div class="kpi-card p-3 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Cliques</div><div id="t_clicks" class="text-xl font-extrabold text-ink mt-1">—</div></div>
+      <div class="kpi-card p-3 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-muted font-semibold">CTR</div><div id="t_ctr" class="text-xl font-extrabold text-ink mt-1">—</div></div>
+      <div class="kpi-card p-3 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-muted font-semibold">LP Views</div><div id="t_lpv" class="text-xl font-extrabold text-ink mt-1">—</div></div>
+      <div class="kpi-card-gold p-3 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-gold font-semibold">Leads</div><div id="t_leads" class="text-xl font-extrabold text-ink mt-1">—</div></div>
+      <div class="kpi-card-gold p-3 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-gold font-semibold">CPL</div><div id="t_cpl" class="text-xl font-extrabold text-ink mt-1">—</div></div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4 mb-4">
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Performance por criativo</h2>
+        <p class="text-xs text-muted mb-4">Spend × leads de cada anúncio</p>
+        <div class="h-[300px]"><canvas id="chartByAd"></canvas></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Performance por público</h2>
+        <p class="text-xs text-muted mb-4">Spend × leads de cada conjunto</p>
+        <div class="h-[300px]"><canvas id="chartByAdset"></canvas></div>
+      </div>
+    </div>
+
+    <div class="bg-surface border border-border rounded-lg p-5 mb-4">
+      <h2 class="text-base font-bold text-ink mb-1">CPL por dia</h2>
+      <p class="text-xs text-muted mb-4">Evolução do custo por lead</p>
+      <div class="h-[260px]"><canvas id="chartCplDaily"></canvas></div>
+    </div>
+
+    <div class="bg-surface border border-border rounded-lg p-5 overflow-hidden">
+      <h2 class="text-base font-bold text-ink mb-1">Detalhamento por criativo</h2>
+      <p class="text-xs text-muted mb-4">Métricas agregadas por anúncio</p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wider text-muted border-b border-border">
+              <th class="py-2 pr-4">Anúncio</th>
+              <th class="py-2 pr-4 text-right">Spend</th>
+              <th class="py-2 pr-4 text-right">Impr.</th>
+              <th class="py-2 pr-4 text-right">Cliques</th>
+              <th class="py-2 pr-4 text-right">LPV</th>
+              <th class="py-2 pr-4 text-right">Leads</th>
+              <th class="py-2 pr-4 text-right">CPL</th>
+              <th class="py-2 text-right">CTR</th>
+            </tr>
+          </thead>
+          <tbody id="adTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PESQUISA ============ -->
+  <section data-tab-content="research" class="hidden fade-in">
+    <div class="mb-6">
+      <h1 class="text-2xl lg:text-3xl font-extrabold text-ink">Pesquisa de Avatar</h1>
+      <p class="text-muted text-sm mt-1">Perfil dos inscritos respondentes da lista de espera</p>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div class="kpi-card p-4 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Respondentes</div><div id="r_total" class="text-2xl font-extrabold text-ink mt-1">—</div></div>
+      <div class="kpi-card-gold p-4 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-gold font-semibold">Prob. compra média</div><div id="r_avgProb" class="text-2xl font-extrabold text-ink mt-1">—</div><div class="text-[11px] text-muted mt-1">Escala 1 a 10</div></div>
+      <div class="kpi-card p-4 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Já fez curso pago</div><div id="r_paidCourse" class="text-2xl font-extrabold text-ink mt-1">—</div></div>
+      <div class="kpi-card p-4 rounded-lg"><div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Já foi aluno Ferreto</div><div id="r_alumni" class="text-2xl font-extrabold text-ink mt-1">—</div></div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4 mb-4">
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Profissão</h2>
+        <p class="text-xs text-muted mb-4">Distribuição dos respondentes</p>
+        <div class="h-[280px]"><canvas id="chartProfession"></canvas></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Nível de conhecimento</h2>
+        <p class="text-xs text-muted mb-4">Em hidráulica de casas</p>
+        <div class="h-[280px]"><canvas id="chartLevel"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4 mb-4">
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Renda mensal</h2>
+        <p class="text-xs text-muted mb-4">Atual × desejada nos próximos anos</p>
+        <div class="h-[300px]"><canvas id="chartIncome"></canvas></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Tempo conhecendo a Ferreto</h2>
+        <p class="text-xs text-muted mb-4">Há quanto tempo seguem a marca</p>
+        <div class="h-[300px]"><canvas id="chartFerretoTime"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-3 gap-4 mb-4">
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Faixa etária</h2>
+        <p class="text-xs text-muted mb-4">Idade dos respondentes</p>
+        <div class="h-[260px]"><canvas id="chartAge"></canvas></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Gênero</h2>
+        <p class="text-xs text-muted mb-4">Identidade de gênero</p>
+        <div class="h-[260px]"><canvas id="chartGender"></canvas></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">Tempo no mercado</h2>
+        <p class="text-xs text-muted mb-4">Há quanto atua na área</p>
+        <div class="h-[260px]"><canvas id="chartExp"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INSIGHTS QUALITATIVOS ============ -->
+  <section data-tab-content="insights" class="hidden fade-in">
+    <div class="mb-6">
+      <h1 class="text-2xl lg:text-3xl font-extrabold text-ink">Insights Qualitativos</h1>
+      <p class="text-muted text-sm mt-1">O que os respondentes disseram, palavra por palavra</p>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4 mb-4">
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">O que falta em mim?</h2>
+        <p class="text-xs text-muted mb-4">Top palavras das respostas</p>
+        <div id="words_lacking" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">O que me motiva</h2>
+        <p class="text-xs text-muted mb-4">Top palavras das respostas</p>
+        <div id="words_motivation" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">O que me desanima no mercado</h2>
+        <p class="text-xs text-muted mb-4">Top palavras das respostas</p>
+        <div id="words_demotivation" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="bg-surface border border-border rounded-lg p-5">
+        <h2 class="text-base font-bold text-ink mb-1">O que não pode faltar no curso</h2>
+        <p class="text-xs text-muted mb-4">Top palavras das respostas</p>
+        <div id="words_must" class="flex flex-wrap gap-2"></div>
+      </div>
+    </div>
+
+    <div class="bg-surface border border-border rounded-lg p-5 mb-4">
+      <details open>
+        <summary class="flex items-center gap-3">
+          <span class="chev text-gold">▶</span>
+          <h2 class="text-base font-bold text-ink">Respostas dos hot leads (probabilidade ≥ 8)</h2>
+          <span id="hotCount" class="pill pill-gold ml-auto">—</span>
+        </summary>
+        <div id="hotResponses" class="space-y-3 mt-4"></div>
+      </details>
+    </div>
+
+    <div class="bg-surface border border-border rounded-lg p-5">
+      <details>
+        <summary class="flex items-center gap-3">
+          <span class="chev text-gold">▶</span>
+          <h2 class="text-base font-bold text-ink">Sugestões e comentários</h2>
+          <span id="commentCount" class="pill pill-muted ml-auto">—</span>
+        </summary>
+        <div id="comments" class="space-y-3 mt-4"></div>
+      </details>
+    </div>
+  </section>
+
+  <footer class="mt-12 pt-6 border-t border-border text-center text-xs text-muted">
+    <div>Atualização automática a cada 5 minutos · Dados puxados das planilhas Google Sheets</div>
+    <div class="mt-1">Ferreto · Formação Hidráulica de Casas — Lançamento gratuito</div>
+  </footer>
+
+</main>
+
+<script>
+/* =========================================================
+   FERRETO DASHBOARD — LEHC
+   ========================================================= */
+
+const SHEET_TRAFFIC = 'https://docs.google.com/spreadsheets/d/1Qzyd8bYTEzn_8-SXdLYrd2LzG3XLtIKwTfuQ9fbp1fk/export?format=csv&gid=0';
+const SHEET_SURVEY  = 'https://docs.google.com/spreadsheets/d/1ENQEiV_q30Ez-XErmnMEEvSmVAzM5bpr7EKFCzd8dvU/export?format=csv&gid=1382847847';
+
+const COLOR = {
+  ink: '#F5F5F5',
+  muted: '#A3A3A3',
+  border: '#262626',
+  gold: '#D4A017',
+  goldDim: '#A07810',
+  goldSoft: '#5A4210',
+  surface: '#141414',
+  white: '#FFFFFF',
+  palette: ['#D4A017','#F5F5F5','#A07810','#5A4210','#737373','#404040','#A3A3A3','#262626'],
+};
+
+Chart.defaults.color = COLOR.muted;
+Chart.defaults.borderColor = COLOR.border;
+Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+
+const charts = {};
+const fmtCurrency = v => 'R$ ' + (v||0).toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const fmtCurrencyShort = v => 'R$ ' + (v||0).toLocaleString('pt-BR', {maximumFractionDigits: 0});
+const fmtNum = v => (v||0).toLocaleString('pt-BR');
+const fmtPct = v => (v||0).toFixed(1) + '%';
+const parseNum = v => {
+  if (v === null || v === undefined || v === '') return 0;
+  const s = String(v).replace(/\./g,'').replace(',', '.').trim();
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+};
+
+/* ========== TABS ========== */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.dataset.active = (b.dataset.tab === tab) ? 'true' : 'false');
+    document.querySelectorAll('[data-tab-content]').forEach(s => {
+      if (s.dataset.tabContent === tab) {
+        s.classList.remove('hidden');
+        s.classList.remove('fade-in'); void s.offsetWidth; s.classList.add('fade-in');
+      } else {
+        s.classList.add('hidden');
+      }
+    });
+  });
+});
+
+/* ========== FETCH ========== */
+async function fetchCSV(url) {
+  const bust = '&_=' + Date.now();
+  const res = await fetch(url + bust, { cache: 'no-store' });
+  if (!res.ok) throw new Error('Erro ' + res.status + ' ao carregar planilha');
+  const text = await res.text();
+  return new Promise((resolve, reject) => {
+    Papa.parse(text, {
+      header: true,
+      skipEmptyLines: true,
+      complete: r => resolve(r.data),
+      error: e => reject(e),
+    });
+  });
+}
+
+/* ========== TRAFFIC PROCESSING ========== */
+function processTraffic(rows) {
+  const norm = rows.map(r => ({
+    date: r.Date,
+    campaign: r['Campaign Name'],
+    spend: parseNum(r['Spend (Cost, Amount Spent)']),
+    adset: r['Adset Name'],
+    ad: r['Ad Name'],
+    perma: r['Instagram Permalink URL'],
+    impr: parseNum(r.Impressions),
+    cpm: parseNum(r['CPM (Cost per 1000 Impressions)']),
+    clicks: parseNum(r['Action Link Clicks']),
+    lpv: parseNum(r['Action Landing Page View']),
+    leads: parseNum(r['Action Leads']),
+    vv3s: parseNum(r['Action 3s Video Views']),
+  })).filter(r => r.date);
+
+  const totals = norm.reduce((a,r) => ({
+    spend: a.spend + r.spend, impr: a.impr + r.impr, clicks: a.clicks + r.clicks,
+    lpv: a.lpv + r.lpv, leads: a.leads + r.leads, vv3s: a.vv3s + r.vv3s,
+  }), {spend:0,impr:0,clicks:0,lpv:0,leads:0,vv3s:0});
+
+  totals.cpm = totals.impr ? (totals.spend / totals.impr * 1000) : 0;
+  totals.cpl = totals.leads ? (totals.spend / totals.leads) : 0;
+  totals.ctr = totals.impr ? (totals.clicks / totals.impr * 100) : 0;
+  totals.lpvRate = totals.clicks ? (totals.lpv / totals.clicks * 100) : 0;
+  totals.leadRate = totals.lpv ? (totals.leads / totals.lpv * 100) : 0;
+
+  const byDate = {};
+  norm.forEach(r => {
+    if (!byDate[r.date]) byDate[r.date] = {spend:0,leads:0,impr:0,clicks:0,lpv:0};
+    byDate[r.date].spend += r.spend;
+    byDate[r.date].leads += r.leads;
+    byDate[r.date].impr += r.impr;
+    byDate[r.date].clicks += r.clicks;
+    byDate[r.date].lpv += r.lpv;
+  });
+  const dailyDates = Object.keys(byDate).sort();
+
+  const groupBy = (key) => {
+    const m = {};
+    norm.forEach(r => {
+      const k = r[key] || '—';
+      if (!m[k]) m[k] = {spend:0,leads:0,impr:0,clicks:0,lpv:0};
+      m[k].spend += r.spend; m[k].leads += r.leads; m[k].impr += r.impr;
+      m[k].clicks += r.clicks; m[k].lpv += r.lpv;
+    });
+    return Object.entries(m).map(([k,v]) => ({
+      key:k, ...v,
+      cpl: v.leads ? v.spend/v.leads : 0,
+      ctr: v.impr ? v.clicks/v.impr*100 : 0,
+    })).sort((a,b)=>b.spend-a.spend);
+  };
+  return { norm, totals, byDate, dailyDates, byAd: groupBy('ad'), byAdset: groupBy('adset') };
+}
+
+/* ========== SURVEY PROCESSING ========== */
+function processSurvey(rows) {
+  // Limpa rows vazias
+  const data = rows.filter(r => r['Qual seu nome?'] && r['Qual seu nome?'].trim());
+
+  const COL = {
+    age: 'Qual sua idade?',
+    gender: 'Qual é a sua identidade de gênero?',
+    profession: 'Você é...',
+    ferretoTime: 'Conhece a Ferreto há quanto tempo?',
+    alumni: 'Você já foi aluno de algum dos meus cursos? Se sim, qual? ',
+    workArea: 'Você trabalha em qual área?',
+    level: 'Você considera o seu nível de conhecimento sobre hidráulica de casas:',
+    experience: 'E há quanto tempo você atua nesse mercado? ',
+    incomeNow: 'Hoje, sua renda mensal está em quanto?',
+    incomeGoal: 'E qual valor mensal você gostaria de alcançar nessa profissão nos próximos anos?  ',
+    paidCourse: 'Você já fez algum curso on-line (e pago) de instalações hidráulicas para casas?',
+    lacking: 'O que acha que falta em você?',
+    motivation: 'O que te motiva a entrar no curso "Hidráulica de Casas"?',
+    demotivation: 'O que mais te desanima nesse mercado de Hidráulica de Casas? ',
+    must: 'Para você, o que não pode faltar no curso "Hidráulica de Casas"? ',
+    probability: 'Considerando um valor de até R$ 1.500 no lançamento desse curso, turma de membro fundador, qual seria a sua probabilidade de comprar o curso? ',
+    weight: 'Na hora de comprar um curso, o que mais pesa para você? ',
+    comments: 'Para finalizar: existe algo que você gostaria de perguntar, sugerir ou comentar sobre o novo curso "Hidráulica de Casas"? ',
+    name: 'Qual seu nome?',
+  };
+
+  const counter = (col) => {
+    const m = {};
+    data.forEach(r => {
+      const v = (r[col] || '').trim();
+      if (!v) return;
+      m[v] = (m[v] || 0) + 1;
+    });
+    return Object.entries(m).map(([k,v]) => ({key:k, count:v})).sort((a,b)=>b.count-a.count);
+  };
+
+  const probs = data.map(r => parseInt(r[COL.probability]||'0',10)).filter(n => n>=1 && n<=10);
+  const probCounts = Array.from({length:10},(_,i)=>0);
+  probs.forEach(p => probCounts[p-1]++);
+  const avgProb = probs.length ? (probs.reduce((a,b)=>a+b,0)/probs.length) : 0;
+  const hotLeads = data.filter(r => parseInt(r[COL.probability]||'0',10) >= 8);
+
+  // Já foi aluno
+  const alumniNo = data.filter(r => (r[COL.alumni]||'').trim() === 'Nunca fui seu aluno').length;
+  const alumniYes = data.length - alumniNo;
+
+  // Já fez curso pago
+  const paidYes = data.filter(r => (r[COL.paidCourse]||'').trim().toLowerCase() === 'sim').length;
+
+  // Word counts dos campos abertos
+  const wordCounts = (col) => {
+    const STOP = new Set(['de','que','para','com','um','uma','ou','os','as','do','da','dos','das','no','na','nos','nas','em','por','o','a','e','é','ser','ter','mais','não','sim','muito','sobre','sua','meu','meus','sou','eu','já','isso','esse','essa','este','esta','tem','foi','vai','pra','aos','ao','seu','minha','assim','ainda','até','quero','quer','quero','tudo','algo','tipo','também','qualquer','poder','possa','quando','onde','como','outro','outros','está','estou','quem','seus','suas','sem','dia','aqui','depois','antes','toda','todo','todos','todas','pode','podem','seja','sejam','têm','muita','muitas','muitos','etc','isso','aquilo','vou','outras','sendo','tão','desse','dessa','vc','vcs','vcs.','vcs,','-','.', ','].map(s=>s.toLowerCase()));
+    const m = {};
+    data.forEach(r => {
+      const t = (r[col] || '').toLowerCase();
+      if (!t || t === '.' || t === '...') return;
+      t.replace(/[^\p{L}\s]/gu,' ').split(/\s+/).forEach(w => {
+        w = w.trim();
+        if (w.length < 4 || STOP.has(w)) return;
+        m[w] = (m[w]||0) + 1;
+      });
+    });
+    return Object.entries(m).map(([k,v])=>({key:k,count:v})).sort((a,b)=>b.count-a.count).slice(0, 25);
+  };
+
+  return {
+    data, COL,
+    total: data.length,
+    avgProb, probCounts, hotLeads,
+    profession: counter(COL.profession),
+    level: counter(COL.level),
+    age: counter(COL.age),
+    gender: counter(COL.gender),
+    ferretoTime: counter(COL.ferretoTime),
+    experience: counter(COL.experience),
+    incomeNow: counter(COL.incomeNow),
+    incomeGoal: counter(COL.incomeGoal),
+    weight: counter(COL.weight),
+    alumniYes, alumniNo, paidYes,
+    words: {
+      lacking: wordCounts(COL.lacking),
+      motivation: wordCounts(COL.motivation),
+      demotivation: wordCounts(COL.demotivation),
+      must: wordCounts(COL.must),
+    },
+  };
+}
+
+/* ========== RENDER HELPERS ========== */
+function setText(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+function makeChart(id, type, data, options={}) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (charts[id]) charts[id].destroy();
+  const baseOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: COLOR.muted, font: { size: 11 } } },
+      tooltip: {
+        backgroundColor: '#0A0A0A',
+        borderColor: COLOR.border,
+        borderWidth: 1,
+        titleColor: COLOR.ink,
+        bodyColor: COLOR.ink,
+        padding: 10,
+        boxPadding: 4,
+        cornerRadius: 6,
+      },
+    },
+    scales: type === 'doughnut' || type === 'pie' || type === 'polarArea' ? {} : {
+      x: { ticks: { color: COLOR.muted, font: { size: 10 } }, grid: { color: COLOR.border, drawBorder: false } },
+      y: { ticks: { color: COLOR.muted, font: { size: 10 } }, grid: { color: COLOR.border, drawBorder: false } },
+    },
+  };
+  charts[id] = new Chart(ctx, { type, data, options: deepMerge(baseOptions, options) });
+}
+function deepMerge(a, b) {
+  const out = {...a};
+  for (const k in b) {
+    if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) out[k] = deepMerge(a[k] || {}, b[k]);
+    else out[k] = b[k];
+  }
+  return out;
+}
+
+/* ========== RENDER OVERVIEW ========== */
+function renderOverview(t, s) {
+  setText('kpiSpend', fmtCurrency(t.totals.spend));
+  setText('kpiSpendSub', `${t.dailyDates.length} dia(s) · CPM ${fmtCurrency(t.totals.cpm)}`);
+  setText('kpiLeads', fmtNum(t.totals.leads));
+  setText('kpiLeadsSub', `Conv. LP→Lead ${fmtPct(t.totals.leadRate)}`);
+  setText('kpiCpl', t.totals.leads ? fmtCurrency(t.totals.cpl) : '—');
+  setText('kpiImpr', fmtNum(t.totals.impr));
+  setText('kpiCpm', `CTR ${fmtPct(t.totals.ctr)}`);
+  setText('kpiSurvey', fmtNum(s.total));
+  setText('kpiSurveyRate', t.totals.leads ? `${fmtPct((s.total/t.totals.leads)*100)} dos leads` : '—');
+  const hotPct = s.total ? (s.hotLeads.length/s.total*100) : 0;
+  setText('kpiHot', fmtNum(s.hotLeads.length));
+  setText('kpiHotPct', `${fmtPct(hotPct)} dos respondentes`);
+
+  // Curva diária
+  makeChart('chartDaily', 'bar', {
+    labels: t.dailyDates.map(d => d.slice(5)),
+    datasets: [
+      { type:'bar', label: 'Investimento (R$)', data: t.dailyDates.map(d => +t.byDate[d].spend.toFixed(2)), backgroundColor: 'rgba(245,245,245,0.18)', borderColor: 'rgba(245,245,245,0.5)', borderWidth: 1, yAxisID: 'y' },
+      { type:'line', label: 'Leads', data: t.dailyDates.map(d => t.byDate[d].leads), borderColor: COLOR.gold, backgroundColor: COLOR.gold, tension: 0.35, borderWidth: 2.5, pointRadius: 4, pointBackgroundColor: COLOR.gold, yAxisID: 'y1' },
+    ]
+  }, {
+    scales: {
+      y: { position: 'left', title: { display: true, text: 'R$', color: COLOR.muted } },
+      y1: { position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Leads', color: COLOR.gold }, ticks: { color: COLOR.gold } },
+    }
+  });
+
+  // Funil
+  const funnelEl = document.getElementById('funnel');
+  const stages = [
+    { label: 'Impressões', value: t.totals.impr, color: '#737373' },
+    { label: 'Cliques', value: t.totals.clicks, color: '#A07810', sub: fmtPct(t.totals.ctr) + ' do total' },
+    { label: 'Visitas LP', value: t.totals.lpv, color: '#C49314', sub: t.totals.clicks ? fmtPct(t.totals.lpv/t.totals.clicks*100) + ' dos cliques' : '' },
+    { label: 'Leads', value: t.totals.leads, color: COLOR.gold, sub: t.totals.lpv ? fmtPct(t.totals.leads/t.totals.lpv*100) + ' das visitas' : '' },
+  ];
+  const max = stages[0].value || 1;
+  funnelEl.innerHTML = stages.map(st => {
+    const pct = Math.max(2, (st.value/max)*100);
+    return `<div>
+      <div class="flex justify-between text-xs mb-1"><span class="text-muted">${st.label}${st.sub?` · <span class="text-ink/70">${st.sub}</span>`:''}</span><span class="font-bold text-ink">${fmtNum(st.value)}</span></div>
+      <div class="h-7 bg-surface2 rounded-md overflow-hidden"><div class="h-full" style="width:${pct}%;background:${st.color}"></div></div>
+    </div>`;
+  }).join('');
+
+  // Probabilidade compra
+  makeChart('chartProb', 'bar', {
+    labels: ['1','2','3','4','5','6','7','8','9','10'],
+    datasets: [{
+      label: 'Respondentes',
+      data: s.probCounts,
+      backgroundColor: s.probCounts.map((_,i) => i+1 >= 8 ? COLOR.gold : (i+1 >= 5 ? COLOR.goldDim : '#404040')),
+      borderRadius: 4,
+    }]
+  }, { plugins: { legend: { display: false } } });
+
+  // Peso na decisão
+  makeChart('chartWeight', 'doughnut', {
+    labels: s.weight.map(x=>x.key),
+    datasets: [{
+      data: s.weight.map(x=>x.count),
+      backgroundColor: COLOR.palette,
+      borderColor: COLOR.surface,
+      borderWidth: 2,
+    }]
+  }, { cutout: '62%', plugins: { legend: { position: 'bottom', labels: { color: COLOR.ink, font: { size: 11 }, padding: 12, boxWidth: 10 } } } });
+}
+
+/* ========== RENDER TRAFFIC ========== */
+function renderTraffic(t) {
+  setText('t_spend', fmtCurrency(t.totals.spend));
+  setText('t_impr', fmtNum(t.totals.impr));
+  setText('t_clicks', fmtNum(t.totals.clicks));
+  setText('t_ctr', fmtPct(t.totals.ctr));
+  setText('t_lpv', fmtNum(t.totals.lpv));
+  setText('t_leads', fmtNum(t.totals.leads));
+  setText('t_cpl', t.totals.leads ? fmtCurrency(t.totals.cpl) : '—');
+
+  // Por criativo
+  makeChart('chartByAd', 'bar', {
+    labels: t.byAd.map(x => x.key),
+    datasets: [
+      { label: 'Spend (R$)', data: t.byAd.map(x => +x.spend.toFixed(2)), backgroundColor: 'rgba(245,245,245,0.4)', borderRadius: 4, yAxisID: 'y' },
+      { label: 'Leads', data: t.byAd.map(x => x.leads), backgroundColor: COLOR.gold, borderRadius: 4, yAxisID: 'y1' },
+    ]
+  }, {
+    scales: {
+      y: { position: 'left' },
+      y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: COLOR.gold } },
+    }
+  });
+
+  // Por adset
+  makeChart('chartByAdset', 'bar', {
+    labels: t.byAdset.map(x => x.key),
+    datasets: [
+      { label: 'Spend (R$)', data: t.byAdset.map(x => +x.spend.toFixed(2)), backgroundColor: 'rgba(245,245,245,0.4)', borderRadius: 4, yAxisID: 'y' },
+      { label: 'Leads', data: t.byAdset.map(x => x.leads), backgroundColor: COLOR.gold, borderRadius: 4, yAxisID: 'y1' },
+    ]
+  }, {
+    indexAxis: 'y',
+    scales: {
+      y: { ticks: { color: COLOR.muted, font: { size: 10 } } },
+      x: { position: 'bottom' },
+    }
+  });
+
+  // CPL por dia
+  const cplByDay = t.dailyDates.map(d => {
+    const x = t.byDate[d];
+    return x.leads ? +(x.spend/x.leads).toFixed(2) : null;
+  });
+  makeChart('chartCplDaily', 'line', {
+    labels: t.dailyDates.map(d => d.slice(5)),
+    datasets: [{
+      label: 'CPL (R$)',
+      data: cplByDay,
+      borderColor: COLOR.gold,
+      backgroundColor: 'rgba(212,160,23,0.15)',
+      tension: 0.3,
+      borderWidth: 2.5,
+      pointRadius: 4,
+      pointBackgroundColor: COLOR.gold,
+      fill: true,
+      spanGaps: true,
+    }]
+  });
+
+  // Tabela
+  const tbl = document.getElementById('adTable');
+  tbl.innerHTML = t.byAd.map(r => `
+    <tr class="border-b border-border/60 hover:bg-surface2/50">
+      <td class="py-2 pr-4 font-medium text-ink">${r.key}</td>
+      <td class="py-2 pr-4 text-right">${fmtCurrency(r.spend)}</td>
+      <td class="py-2 pr-4 text-right">${fmtNum(r.impr)}</td>
+      <td class="py-2 pr-4 text-right">${fmtNum(r.clicks)}</td>
+      <td class="py-2 pr-4 text-right">${fmtNum(r.lpv)}</td>
+      <td class="py-2 pr-4 text-right font-bold text-gold">${fmtNum(r.leads)}</td>
+      <td class="py-2 pr-4 text-right">${r.leads ? fmtCurrency(r.cpl) : '—'}</td>
+      <td class="py-2 text-right">${fmtPct(r.ctr)}</td>
+    </tr>
+  `).join('');
+}
+
+/* ========== RENDER SURVEY ========== */
+function renderSurvey(s) {
+  setText('r_total', fmtNum(s.total));
+  setText('r_avgProb', s.avgProb.toFixed(1));
+  const paidPct = s.total ? (s.paidYes/s.total*100) : 0;
+  setText('r_paidCourse', `${fmtPct(paidPct)}`);
+  const alumniPct = s.total ? (s.alumniYes/s.total*100) : 0;
+  setText('r_alumni', `${fmtPct(alumniPct)}`);
+
+  const horizontalBar = (id, items, max = 8) => {
+    const data = items.slice(0, max);
+    makeChart(id, 'bar', {
+      labels: data.map(x => x.key.length > 38 ? x.key.slice(0,36)+'…' : x.key),
+      datasets: [{ label: 'Respondentes', data: data.map(x => x.count), backgroundColor: COLOR.gold, borderRadius: 4 }]
+    }, {
+      indexAxis: 'y',
+      plugins: { legend: { display: false } },
+    });
+  };
+  const donut = (id, items) => {
+    makeChart(id, 'doughnut', {
+      labels: items.map(x => x.key),
+      datasets: [{ data: items.map(x=>x.count), backgroundColor: COLOR.palette, borderColor: COLOR.surface, borderWidth: 2 }]
+    }, { cutout: '60%', plugins: { legend: { position: 'bottom', labels: { color: COLOR.ink, font: { size: 11 }, padding: 10, boxWidth: 10 } } } });
+  };
+
+  horizontalBar('chartProfession', s.profession);
+  donut('chartLevel', s.level);
+
+  // Renda dual
+  const incomeKeys = Array.from(new Set([...s.incomeNow.map(x=>x.key), ...s.incomeGoal.map(x=>x.key)])).filter(k => k && k !== 'Prefiro não falar.');
+  const orderRenda = (k) => {
+    if (!k) return 999;
+    const m = k.match(/[\d.]+/g);
+    if (!m) return 998;
+    return parseInt(m[0].replace(/\./g,''),10) || 998;
+  };
+  incomeKeys.sort((a,b)=>orderRenda(a)-orderRenda(b));
+  const mapNow = Object.fromEntries(s.incomeNow.map(x=>[x.key,x.count]));
+  const mapGoal = Object.fromEntries(s.incomeGoal.map(x=>[x.key,x.count]));
+  makeChart('chartIncome', 'bar', {
+    labels: incomeKeys.map(k => k.length > 22 ? k.slice(0,20)+'…' : k),
+    datasets: [
+      { label: 'Atual', data: incomeKeys.map(k => mapNow[k]||0), backgroundColor: '#737373', borderRadius: 4 },
+      { label: 'Desejada', data: incomeKeys.map(k => mapGoal[k]||0), backgroundColor: COLOR.gold, borderRadius: 4 },
+    ]
+  });
+
+  donut('chartFerretoTime', s.ferretoTime);
+  horizontalBar('chartAge', s.age, 6);
+  donut('chartGender', s.gender);
+  horizontalBar('chartExp', s.experience, 6);
+}
+
+/* ========== RENDER INSIGHTS ========== */
+function renderInsights(s) {
+  const tagPill = (w, count, max) => {
+    const intensity = Math.max(0.3, count/max);
+    const fontSize = 12 + intensity*10;
+    return `<span style="font-size:${fontSize.toFixed(1)}px;background:rgba(212,160,23,${(0.10+intensity*0.45).toFixed(2)});color:#F5F5F5;border:1px solid rgba(212,160,23,${(0.30+intensity*0.4).toFixed(2)});padding:4px 10px;border-radius:999px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">${w}<span style="opacity:0.6;font-size:11px;font-weight:500">${count}</span></span>`;
+  };
+  const renderWords = (id, list) => {
+    const max = list[0]?.count || 1;
+    document.getElementById(id).innerHTML = list.map(w => tagPill(w.key, w.count, max)).join(' ');
+  };
+  renderWords('words_lacking', s.words.lacking);
+  renderWords('words_motivation', s.words.motivation);
+  renderWords('words_demotivation', s.words.demotivation);
+  renderWords('words_must', s.words.must);
+
+  // Hot leads responses
+  const hotEl = document.getElementById('hotResponses');
+  setText('hotCount', `${s.hotLeads.length} hot leads`);
+  hotEl.innerHTML = s.hotLeads.slice(0, 30).map(r => {
+    const motiv = (r[s.COL.motivation]||'').trim();
+    const must = (r[s.COL.must]||'').trim();
+    const prob = r[s.COL.probability];
+    const name = r[s.COL.name];
+    const prof = r[s.COL.profession];
+    const lvl = r[s.COL.level];
+    return `<div class="quote-card p-4 rounded-md">
+      <div class="flex items-center gap-2 mb-2 text-xs">
+        <span class="font-bold text-ink">${name}</span>
+        <span class="text-muted">·</span>
+        <span class="text-muted">${prof || '—'}</span>
+        ${lvl ? `<span class="text-muted">·</span><span class="text-muted">${lvl}</span>`:''}
+        <span class="ml-auto pill pill-gold">Prob ${prob}/10</span>
+      </div>
+      ${motiv && motiv !== '.' ? `<div class="text-sm text-ink/90 mb-2"><span class="text-gold font-semibold text-xs uppercase tracking-wider">Motivação · </span>${motiv}</div>` : ''}
+      ${must && must !== '.' ? `<div class="text-sm text-ink/90"><span class="text-gold font-semibold text-xs uppercase tracking-wider">Não pode faltar · </span>${must}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Comments
+  const commentsEl = document.getElementById('comments');
+  const comments = s.data.filter(r => {
+    const c = (r[s.COL.comments]||'').trim();
+    return c && c !== '.' && c !== 'Não' && c !== 'Nada' && c.length > 5;
+  });
+  setText('commentCount', `${comments.length} comentários`);
+  commentsEl.innerHTML = comments.map(r => `
+    <div class="quote-card p-4 rounded-md">
+      <div class="text-xs text-muted mb-1.5"><span class="font-bold text-ink">${r[s.COL.name]}</span> · ${r[s.COL.profession]||'—'}</div>
+      <div class="text-sm text-ink/90">${(r[s.COL.comments]||'').replace(/\n/g,'<br>')}</div>
+    </div>
+  `).join('');
+}
+
+/* ========== LOAD ALL ========== */
+async function loadAll() {
+  const refreshIcon = document.getElementById('refreshIcon');
+  refreshIcon.style.animation = 'spin 0.8s linear infinite';
+  try {
+    const [traffic, survey] = await Promise.all([fetchCSV(SHEET_TRAFFIC), fetchCSV(SHEET_SURVEY)]);
+    const t = processTraffic(traffic);
+    const s = processSurvey(survey);
+    renderOverview(t, s);
+    renderTraffic(t);
+    renderSurvey(s);
+    renderInsights(s);
+    const now = new Date();
+    setText('lastUpdateTime', now.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) + ' · ' + now.toLocaleDateString('pt-BR'));
+    document.getElementById('loadingScreen').style.opacity = '0';
+    setTimeout(() => document.getElementById('loadingScreen').style.display = 'none', 300);
+  } catch (err) {
+    console.error(err);
+    alert('Erro ao carregar dados: ' + err.message + '\n\nVerifique se as planilhas continuam públicas.');
+  } finally {
+    setTimeout(() => refreshIcon.style.animation = '', 600);
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', loadAll);
+loadAll();
+setInterval(loadAll, 5 * 60 * 1000); // 5 min
+</script>
+</body>
+</html>
