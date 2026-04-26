@@ -117,36 +117,82 @@
       <p class="text-muted text-sm mt-1">Captação via Meta Ads + Pesquisa de avatar com a lista de espera</p>
     </div>
 
+    <!-- DESTAQUE: GRUPO -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+      <div class="kpi-card-gold p-5 rounded-lg">
+        <div class="flex items-center gap-2 text-[10px] uppercase tracking-wider text-gold font-semibold">
+          <span class="w-1.5 h-1.5 rounded-full bg-gold animate-pulse"></span>
+          Leads no Grupo
+        </div>
+        <div id="kpiGroupCount" class="text-3xl lg:text-[42px] font-extrabold text-ink mt-2 leading-none">—</div>
+        <div id="kpiGroupSub" class="text-xs text-muted mt-2">Inscritos efetivos no grupo de lançamento</div>
+      </div>
+      <div class="kpi-card-gold p-5 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-gold font-semibold">Taxa de Entrada no Grupo</div>
+        <div id="kpiGroupRate" class="text-3xl lg:text-[42px] font-extrabold text-ink mt-2 leading-none">—</div>
+        <div id="kpiGroupRateSub" class="text-xs text-muted mt-2">—</div>
+      </div>
+      <div class="kpi-card p-5 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Leads Fora do Grupo</div>
+        <div id="kpiGroupOut" class="text-3xl lg:text-[42px] font-extrabold text-ink mt-2 leading-none">—</div>
+        <div id="kpiGroupOutSub" class="text-xs text-muted mt-2">—</div>
+      </div>
+    </div>
+
     <!-- KPIs PRINCIPAIS -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
       <div class="kpi-card p-4 rounded-lg">
         <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Investimento</div>
         <div id="kpiSpend" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
         <div id="kpiSpendSub" class="text-[11px] text-muted mt-1">—</div>
       </div>
       <div class="kpi-card-gold p-4 rounded-lg">
-        <div class="text-[10px] uppercase tracking-wider text-gold font-semibold">Leads Captados</div>
-        <div id="kpiLeads" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
-        <div id="kpiLeadsSub" class="text-[11px] text-muted mt-1">—</div>
+        <div class="text-[10px] uppercase tracking-wider text-gold font-semibold">Leads Totais</div>
+        <div id="kpiLeadsTotal" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div class="text-[11px] text-muted mt-1">Pagos + orgânicos</div>
       </div>
       <div class="kpi-card p-4 rounded-lg">
-        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">CPL Médio</div>
-        <div id="kpiCpl" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
-        <div class="text-[11px] text-muted mt-1">Custo por lead</div>
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Leads Pagos</div>
+        <div id="kpiLeadsPaid" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiLeadsPaidSub" class="text-[11px] text-muted mt-1">Com UTM</div>
       </div>
+      <div class="kpi-card p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Leads Orgânicos</div>
+        <div id="kpiLeadsOrganic" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiLeadsOrganicSub" class="text-[11px] text-muted mt-1">Sem UTM</div>
+      </div>
+      <div class="kpi-card p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">CPL Tráfego</div>
+        <div id="kpiCplTraffic" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div class="text-[11px] text-muted mt-1">Spend / leads pagos</div>
+      </div>
+      <div class="kpi-card p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">CPL Total</div>
+        <div id="kpiCplTotal" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div class="text-[11px] text-muted mt-1">Spend / leads totais</div>
+      </div>
+    </div>
+
+    <!-- KPIs SECUNDÁRIOS -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
       <div class="kpi-card p-4 rounded-lg">
         <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Impressões</div>
-        <div id="kpiImpr" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiImpr" class="text-xl lg:text-2xl font-extrabold text-ink mt-1">—</div>
         <div id="kpiCpm" class="text-[11px] text-muted mt-1">—</div>
       </div>
       <div class="kpi-card p-4 rounded-lg">
+        <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">CTR</div>
+        <div id="kpiCtr" class="text-xl lg:text-2xl font-extrabold text-ink mt-1">—</div>
+        <div class="text-[11px] text-muted mt-1">Cliques / impressões</div>
+      </div>
+      <div class="kpi-card p-4 rounded-lg">
         <div class="text-[10px] uppercase tracking-wider text-muted font-semibold">Pesquisas Respondidas</div>
-        <div id="kpiSurvey" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiSurvey" class="text-xl lg:text-2xl font-extrabold text-ink mt-1">—</div>
         <div id="kpiSurveyRate" class="text-[11px] text-muted mt-1">—</div>
       </div>
       <div class="kpi-card-gold p-4 rounded-lg">
         <div class="text-[10px] uppercase tracking-wider text-gold font-semibold">Hot Leads (compra ≥ 8)</div>
-        <div id="kpiHot" class="text-2xl lg:text-[28px] font-extrabold text-ink mt-1">—</div>
+        <div id="kpiHot" class="text-xl lg:text-2xl font-extrabold text-ink mt-1">—</div>
         <div id="kpiHotPct" class="text-[11px] text-muted mt-1">—</div>
       </div>
     </div>
@@ -372,6 +418,8 @@
    ========================================================= */
 
 const SHEET_TRAFFIC = 'https://docs.google.com/spreadsheets/d/1Qzyd8bYTEzn_8-SXdLYrd2LzG3XLtIKwTfuQ9fbp1fk/export?format=csv&gid=0';
+const SHEET_GROUP   = 'https://docs.google.com/spreadsheets/d/1Qzyd8bYTEzn_8-SXdLYrd2LzG3XLtIKwTfuQ9fbp1fk/export?format=csv&gid=564656555';
+const SHEET_LEADS   = 'https://docs.google.com/spreadsheets/d/1EZKd8VR1O7WG0gQaweondg8_Nu7yfHN1YyuWIWspjWU/export?format=csv&gid=0';
 const SHEET_SURVEY  = 'https://docs.google.com/spreadsheets/d/1ENQEiV_q30Ez-XErmnMEEvSmVAzM5bpr7EKFCzd8dvU/export?format=csv&gid=1382847847';
 
 const COLOR = {
@@ -489,6 +537,26 @@ function processTraffic(rows) {
     })).sort((a,b)=>b.spend-a.spend);
   };
   return { norm, totals, byDate, dailyDates, byAd: groupBy('ad'), byAdset: groupBy('adset') };
+}
+
+/* ========== GROUP PROCESSING ========== */
+function processGroup(rows) {
+  // Aba "Leads no grupo": uma única coluna com um valor
+  if (!rows.length) return { count: 0 };
+  const r = rows[0];
+  const key = Object.keys(r).find(k => /grupo/i.test(k)) || Object.keys(r)[0];
+  return { count: parseNum(r[key]) };
+}
+
+/* ========== LEADS PROCESSING ========== */
+function processLeads(rows) {
+  const utmCols = ['utm_campaign','utm_source','utm_medium','utm_content','utm_term'];
+  const hasIdentity = (r) => (r.Instagram || '').trim() || (r.WhatsApp || '').trim() || (r['E-mail'] || '').trim();
+  const valid = rows.filter(hasIdentity);
+  const isPaid = (r) => utmCols.some(c => (r[c] || '').trim());
+  const paid = valid.filter(isPaid).length;
+  const organic = valid.length - paid;
+  return { total: valid.length, paid, organic };
 }
 
 /* ========== SURVEY PROCESSING ========== */
@@ -641,16 +709,33 @@ function deepMerge(a, b) {
 }
 
 /* ========== RENDER OVERVIEW ========== */
-function renderOverview(t, s) {
+function renderOverview(t, s, g, l) {
+  // Destaque: Grupo
+  setText('kpiGroupCount', fmtNum(g.count));
+  const groupRate = l.total ? (g.count / l.total * 100) : 0;
+  setText('kpiGroupRate', fmtPct(groupRate));
+  setText('kpiGroupRateSub', l.total ? `${fmtNum(g.count)} de ${fmtNum(l.total)} leads totais` : '—');
+  const fora = Math.max(0, l.total - g.count);
+  setText('kpiGroupOut', fmtNum(fora));
+  setText('kpiGroupOutSub', l.total ? `${fmtPct(fora/l.total*100)} dos leads totais` : '—');
+
+  // KPIs principais
   setText('kpiSpend', fmtCurrency(t.totals.spend));
   setText('kpiSpendSub', `${t.dailyDates.length} dia(s) · CPM ${fmtCurrency(t.totals.cpm)}`);
-  setText('kpiLeads', fmtNum(t.totals.leads));
-  setText('kpiLeadsSub', `Conv. LP→Lead ${fmtPct(t.totals.leadRate)}`);
-  setText('kpiCpl', t.totals.leads ? fmtCurrency(t.totals.cpl) : '—');
+  setText('kpiLeadsTotal', fmtNum(l.total));
+  setText('kpiLeadsPaid', fmtNum(l.paid));
+  setText('kpiLeadsPaidSub', l.total ? `${fmtPct(l.paid/l.total*100)} do total` : 'Com UTM');
+  setText('kpiLeadsOrganic', fmtNum(l.organic));
+  setText('kpiLeadsOrganicSub', l.total ? `${fmtPct(l.organic/l.total*100)} do total` : 'Sem UTM');
+  setText('kpiCplTraffic', l.paid ? fmtCurrency(t.totals.spend / l.paid) : '—');
+  setText('kpiCplTotal', l.total ? fmtCurrency(t.totals.spend / l.total) : '—');
+
+  // KPIs secundários
   setText('kpiImpr', fmtNum(t.totals.impr));
-  setText('kpiCpm', `CTR ${fmtPct(t.totals.ctr)}`);
+  setText('kpiCpm', `CPM ${fmtCurrency(t.totals.cpm)}`);
+  setText('kpiCtr', fmtPct(t.totals.ctr));
   setText('kpiSurvey', fmtNum(s.total));
-  setText('kpiSurveyRate', t.totals.leads ? `${fmtPct((s.total/t.totals.leads)*100)} dos leads` : '—');
+  setText('kpiSurveyRate', l.total ? `${fmtPct((s.total/l.total)*100)} dos leads` : '—');
   const hotPct = s.total ? (s.hotLeads.length/s.total*100) : 0;
   setText('kpiHot', fmtNum(s.hotLeads.length));
   setText('kpiHotPct', `${fmtPct(hotPct)} dos respondentes`);
@@ -980,10 +1065,17 @@ async function loadAll() {
   const refreshIcon = document.getElementById('refreshIcon');
   refreshIcon.style.animation = 'spin 0.8s linear infinite';
   try {
-    const [traffic, survey] = await Promise.all([fetchCSV(SHEET_TRAFFIC), fetchCSV(SHEET_SURVEY)]);
+    const [traffic, group, leads, survey] = await Promise.all([
+      fetchCSV(SHEET_TRAFFIC),
+      fetchCSV(SHEET_GROUP),
+      fetchCSV(SHEET_LEADS),
+      fetchCSV(SHEET_SURVEY),
+    ]);
     const t = processTraffic(traffic);
+    const g = processGroup(group);
+    const l = processLeads(leads);
     const s = processSurvey(survey);
-    renderOverview(t, s);
+    renderOverview(t, s, g, l);
     renderTraffic(t);
     renderSurvey(s);
     renderInsights(s);
