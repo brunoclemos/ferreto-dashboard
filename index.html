@@ -551,9 +551,19 @@ function processGroup(rows) {
 /* ========== LEADS PROCESSING ========== */
 function processLeads(rows) {
   const utmCols = ['utm_campaign','utm_source','utm_medium','utm_content','utm_term'];
+  // Tags de UTM que sinalizam tráfego orgânico (preenchidas manualmente em posts/bio).
+  // Qualquer valor aqui, assim como UTM vazia/null/undefined, conta como lead orgânico.
+  const ORGANIC_UTM_VALUES = new Set(['org_ig', 'ig_org']);
+  const normalizeUtm = (v) => (v == null ? '' : String(v).trim().toLowerCase());
+  const isPaidUtmValue = (v) => {
+    const norm = normalizeUtm(v);
+    if (!norm) return false;                  // vazio = orgânico
+    if (ORGANIC_UTM_VALUES.has(norm)) return false; // tag manual de orgânico
+    return true;
+  };
   const hasIdentity = (r) => (r.Instagram || '').trim() || (r.WhatsApp || '').trim() || (r['E-mail'] || '').trim();
   const valid = rows.filter(hasIdentity);
-  const isPaid = (r) => utmCols.some(c => (r[c] || '').trim());
+  const isPaid = (r) => utmCols.some(c => isPaidUtmValue(r[c]));
   const paid = valid.filter(isPaid).length;
   const organic = valid.length - paid;
   return { total: valid.length, paid, organic };
